@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Casa Econômica – Jogo da Energia</title>
+<style>
+:root{--bg:#eef2f9;--card:#fff;--tx:#0f1a33;--mut:#5b6785;--line:#d5dcec;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--ac:#0ea5e9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1524;--card:#182036;--tx:#e8ecf7;--mut:#93a0bd;--line:#2a3555}}
+:root[data-theme="dark"]{--bg:#0f1524;--card:#182036;--tx:#e8ecf7;--mut:#93a0bd;--line:#2a3555}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{max-width:820px;margin:auto;padding:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;margin-bottom:8px;box-shadow:0 2px 10px #0002}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.sm{font-size:13px;color:var(--mut)}
+.meter{position:relative;height:24px;border-radius:12px;background:var(--line);overflow:hidden;margin:6px 0}
+#bar{height:100%;width:0;background:var(--ok);transition:width .15s,background .3s}
+#kwh{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;text-shadow:0 1px 2px #000a}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-size:12px;color:var(--tx)}
+#game{width:100%;max-width:800px;aspect-ratio:800/520;margin:auto;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px #0007;border:3px solid #0f172a}
+#hint{text-align:center;padding:8px;font-weight:500;font-size:14px;min-height:58px}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
+.btn.g{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+.ov{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));z-index:5;overflow:auto}
+#calc{z-index:6}.ov.on{display:flex}
+.box{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:100%;overflow:auto}
+.box h2{margin:0 0 8px}
+.f{background:var(--bg);border-left:4px solid var(--ac);padding:8px 10px;border-radius:8px;margin:8px 0;font-weight:600}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;cursor:pointer}
+.opt.ok{background:#22c55e;color:#fff}.opt.bad{background:#ef4444;color:#fff}
+label{display:block;margin:6px 0;font-weight:600;font-size:13px}
+input,select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit}
+#pad{display:none;justify-content:space-between;align-items:center;padding:6px 8px;user-select:none;-webkit-user-select:none}
+@media(pointer:coarse){#pad{display:flex}}
+.show-pad #pad{display:flex}
+body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.dp{display:grid;grid-template-areas:". u ." "l . r" ". d .";gap:4px}
+#pad button{width:58px;height:58px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--tx);font-size:20px;touch-action:none}
+#pad #bact{width:96px;height:96px;border-radius:50%;background:var(--ac);color:#fff;font-size:16px;font-weight:700}
+.tt{font-size:16px}.ib{padding:5px 10px;font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:5px 6px;text-align:center}
+.tile small{display:block;color:var(--mut);font-size:11px}.tile b{font-size:14px;display:inline-block}
+.dbar{height:4px;background:var(--line);border-radius:2px;margin:3px 0;overflow:hidden}.dbar i{display:block;height:100%;width:0;background:var(--ac)}
+.tk{position:absolute;top:0;bottom:0;width:2px;background:#fffa;z-index:1}
+.meter{height:26px}.pulse{animation:pl .5s infinite alternate}
+@keyframes pl{to{box-shadow:0 0 0 3px #ef444499}}
+@keyframes pp{from{transform:scale(.9);opacity:0}}
+.ov.on .box{animation:pp .25s ease-out}
+.bump{animation:bp .35s}@keyframes bp{50%{transform:scale(1.35);color:var(--warn)}}
+.chip.hot{background:#ef444422;border-color:var(--bad);font-weight:700}
+.btn{transition:transform .1s,filter .15s}.btn:hover{filter:brightness(1.1)}.btn:active,.opt:active{transform:scale(.96)}
+#bar{background-image:linear-gradient(#fff4,#0002)}
+</style></head><body>
+<div id="app">
+ <div class="card" id="hud">
+ <div class="row"><b class="tt">🏠 Casa Econômica</b><span><button class="btn g ib" id="bmute">🔊</button> <button class="btn g ib" id="bcalc">🧮 Calculadora</button></span></div>
+ <div class="tiles"><div class="tile"><small>📅 Dia</small><b id="day">Dia 1</b><div class="dbar"><i id="dbar"></i></div><small id="clk"></small></div><div class="tile"><small>⚡ Potência</small><b id="pw"></b></div><div class="tile"><small>💰 Conta hoje</small><b id="cost"></b></div><div class="tile"><small>⭐ Pontos</small><b id="pts">0</b></div></div>
+ <div class="meter"><i class="tk" style="left:70%"></i><i class="tk" style="left:85%"></i><div id="bar"></div><span id="kwh"></span></div>
+  <div class="row sm" id="ms" style="justify-content:flex-start"></div>
+  <div class="row sm" id="on" style="justify-content:flex-start"></div>
+ </div>
+ <div id="game"></div>
+ <div id="hint"></div>
+ <div id="pad" oncontextmenu="return false"><div class="dp"><button data-k="u" style="grid-area:u">▲</button><button data-k="l" style="grid-area:l">◀</button><button data-k="r" style="grid-area:r">▶</button><button data-k="d" style="grid-area:d">▼</button></div><button id="bact">⚡ Ação</button></div>
+</div>
+<div id="modal" class="ov"><div class="box" id="mbox"></div></div>
+<div id="calc" class="ov"><div class="box"><h2>🧮 Calculadora de consumo</h2>
+ <label>Aparelho <select id="cs"></select></label>
+ <label>Potência (W) <input id="cp" type="number" step="any" min="0" value="100"></label>
+ <label>Horas ligado por dia <input id="ch" type="number" step="any" min="0" value="5"></label>
+ <label>Dias <input id="cd" type="number" step="any" min="0" value="30"></label>
+ <label>Tarifa (R$ por kWh) <input id="ct" type="number" step="any" min="0" value="0.9"></label>
+ <div id="cr" class="f"></div>
+ <div class="sm">Energia (kWh) = Potência (kW) × Tempo (h) · Custo = kWh × tarifa</div><br>
+ <button class="btn" id="cx">Fechar</button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script>
+const $=i=>document.getElementById(i);
+const fmt=(n,d=2)=>n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const TAR=.9,DAYSEC=70;
+const lsg=()=>{try{return +localStorage.getItem('ce_best')||0}catch(e){return 0}};
+const lss=v=>{try{localStorage.setItem('ce_best',v)}catch(e){}};
+const D0=[
+{id:'l1',n:'Lâmpada da sala',e:'💡',w:60,x:120,y:90,lamp:1,wt:2},
+{id:'tv',n:'TV',e:'📺',w:100,x:330,y:140,wt:2},
+{id:'fan',n:'Ventilador',e:'🌀',w:80,x:110,y:210,wt:2},
+{id:'l2',n:'Lâmpada da cozinha',e:'💡',w:60,x:500,y:90,lamp:1,wt:2},
+{id:'fr',n:'Geladeira',e:'🧊',w:60,x:740,y:70,fixed:1},
+{id:'ov',n:'Forno elétrico',e:'🍞',w:1500,x:650,y:200,auto:1,wt:1},
+{id:'l3',n:'Lâmpada do quarto',e:'💡',w:60,x:110,y:340,lamp:1,wt:2},
+{id:'pc',n:'Computador',e:'💻',w:200,x:320,y:330,wt:2},
+{id:'ac',n:'Ar-condicionado',e:'❄️',w:1400,x:290,y:430,wt:2},
+{id:'l4',n:'Lâmpada do banheiro',e:'💡',w:60,x:500,y:340,lamp:1,wt:2},
+{id:'sh',n:'Chuveiro elétrico',e:'🚿',w:4500,x:700,y:350,auto:1,wt:1}];
+const devs=D0.map(d=>({...d,w0:d.w,on:0,kwh:0,hrs:0,led:0}));
+const G={state:'menu',day:1,h:0,kwh:0,P:0,pts:0,modal:0,calc:0,spawn:0,offs:0,leds:0,m1:0,m2:0,hu:0,best:lsg()};
+const T={l:0,r:0,u:0,d:0};let S;
+const limit=()=>Math.max(14,22-.7*(G.day-1));
+const interval=()=>Math.max(2.2,5-.35*(G.day-1));
+const show=h=>{$('mbox').innerHTML=h;$('modal').classList.add('on');G.modal=1};
+const hide=()=>{$('modal').classList.remove('on');G.modal=0};
+
+function missions(){const L=limit(),a=[{t:`Desligar aparelhos ${G.offs}/${G.m1}`,ok:G.offs>=G.m1,ic:G.offs>=G.m1?'✅':'⬜'}];
+ if(G.m2)a.push({t:`Trocar por LED ${G.leds}/${G.m2}`,ok:G.leds>=G.m2,ic:G.leds>=G.m2?'✅':'⬜'});
+ const ok=G.kwh<=L*.7;a.push({t:`Fechar abaixo de ${fmt(L*.7,1)} kWh`,ok,ic:ok?'🟢':'🔴'});return a}
+function hud(){const L=limit(),r=G.kwh/L,c=(6+G.h)%24,hh=Math.floor(c),mm=Math.floor((c-hh)*60/10)*10;
+ $('day').textContent='Dia '+G.day;$('clk').textContent='🕒 '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+ if($('pts').textContent!=String(G.pts)){$('pts').textContent=G.pts;$('pts').classList.remove('bump');void $('pts').offsetWidth;$('pts').classList.add('bump')}$('bar').style.width=Math.min(100,r*100)+'%';$('dbar').style.width=(G.h/24*100)+'%';$('bar').parentElement.classList.toggle('pulse',r>.85);
+ $('bar').style.background=r<.6?'var(--ok)':r<.85?'var(--warn)':'var(--bad)';
+ $('kwh').textContent=`${fmt(G.kwh)} / ${fmt(L,1)} kWh (limite do dia)`;
+ $('pw').textContent=fmt(G.P,0)+' W';$('cost').textContent='R$ '+fmt(G.kwh*TAR);
+ $('ms').innerHTML=missions().map(m=>`<span class="chip">${m.ic} ${m.t}</span>`).join('');
+ const o=devs.filter(d=>d.on).sort((a,b)=>b.w-a.w).slice(0,5).map(d=>`<span class="chip${d.w>1000?' hot':''}">${d.e} ${fmt(d.w,0)} W</span>`).join('')||'<span class="chip">Nada ligado 🎉</span>';
+ if(o!==G.oc){G.oc=o;$('on').innerHTML=o}}
+
+function pop(d,t,c){const x=S.add.text(d.x,d.y-38,t,{fontSize:'14px',fontStyle:'bold',color:c,stroke:'#000',strokeThickness:3,fontFamily:'sans-serif'}).setOrigin(.5).setDepth(9);
+ S.tweens.add({targets:x,y:x.y-30,alpha:0,duration:1100,onComplete:()=>x.destroy()})}
+function spawnOne(){const p=[];devs.forEach(d=>{if(!d.on&&!d.fixed)for(let i=0;i<d.wt;i++)p.push(d)});if(!p.length)return;
+ const d=p[Math.random()*p.length|0];d.on=1;d.t0=G.h;if(S)pop(d,'ligou! ⚡','#f87171')}
+function turnOff(d,auto){d.on=0;if(auto)pop(d,'desligou sozinho','#93a0bd')}
+function near(){let b=null,m=90;devs.forEach(d=>{const q=Phaser.Math.Distance.Between(S.p.x,S.p.y,d.x,d.y);if(q<m){m=q;b=d}});return b}
+function act(){if(G.state!=='play'||G.modal||G.calc)return;const d=near();if(!d)return;
+ if(d.on&&!d.fixed){turnOff(d);G.offs++;const t0=performance.now();G.cb=t0-(G.lo||0)<3500?G.cb+1:1;G.lo=t0;G.pts+=5*G.cb;beep(600+G.cb*60);burst(d,0x4ade80);hop();if(G.cb>1)pop({x:d.x,y:d.y-24},`COMBO x${G.cb}!`,'#fde047');pop(d,`-${fmt(d.w,0)} W`,'#4ade80')}
+ else if(d.on)pop(d,'Precisa ficar ligada','#fbbf24');
+ else if(d.lamp&&d.w>20){d.w=9;d.led=1;G.leds++;G.pts+=15;beep(880);burst(d,0x38bdf8);hop();pop(d,'LED: 60 W → 9 W','#38bdf8')}
+ hud()}
+
+function startDay(){devs.forEach(d=>{d.on=d.fixed?1:0;d.kwh=0;d.hrs=0});Object.assign(G,{h:0,kwh:0,P:0,spawn:0,offs:0,leds:0});
+ G.m1=3+Math.ceil(G.day*1.2);G.m2=Math.min(2,devs.filter(d=>d.lamp&&d.w>20).length);
+ G.warned=0;spawnOne();initNpcs();G.state='play';hide();hud();const nw=S.npcs.find(n=>n.from==G.day&&G.day>1);banner(`Dia ${G.day}\nLimite: ${fmt(limit(),1)} kWh`+(nw?`\n👋 ${nw.n} chegou!`:''))}
+function newGame(){G.day=1;G.pts=0;devs.forEach(d=>{d.w=d.w0;d.led=0});startDay()}
+function nextDay(){G.day++;startDay()}
+
+function mkQuiz(){const d=D0[Math.random()*D0.length|0],h=[2,3,4,5,6,8][Math.random()*6|0],k=d.w/1000,e=k*h,c=Math.random()<.5,a=c?e*30*TAR:e;
+ const f=v=>c?'R$ '+fmt(v):fmt(v)+' kWh';
+ const q=`${d.e} ${d.n}, ${d.w} W, ligado ${h} h por dia. `+(c?'Quanto custa em 30 dias com tarifa de R$ 0,90/kWh?':'Quantos kWh consome em 1 dia?');
+ G.ex=`${d.w} W ÷ 1000 = ${fmt(k,3)} kW → ${fmt(k,3)} × ${h} h = ${fmt(e)} kWh/dia`+(c?` → ${fmt(e)} × 30 dias × 0,90 = R$ ${fmt(a)}`:'');
+ const seen=new Set([f(a)]),o=[{t:f(a),ok:1}];
+ for(const m of[10,.1,3,2,.5,5]){if(o.length>3)break;const t=f(a*m);if(!seen.has(t)){seen.add(t);o.push({t,ok:0})}}
+ return{q,o:o.sort(()=>Math.random()-.5)}}
+function endDay(){G.state='dayend';confetti();beep(880,.15);setTimeout(()=>beep(1100,.2),150);const L=limit(),ms=missions(),bonus=ms.filter(m=>m.ok).length*30,base=100+Math.round((L-G.kwh)*10);
+ G.pts+=base+bonus;hud();const top=devs.filter(d=>d.hrs>0).sort((a,b)=>b.kwh-a.kwh).slice(0,3),q=mkQuiz();
+ show(`<h2>🌙 Dia ${G.day} concluído! ${'⭐'.repeat(G.kwh<=L*.5?3:G.kwh<=L*.75?2:1)}</h2>
+ <p>Consumo: <b>${fmt(G.kwh)} kWh</b> (limite ${fmt(L,1)}) · Conta do dia: <b>R$ ${fmt(G.kwh*TAR)}</b></p>
+ <p>${ms.map(m=>`${m.ok?'✅':'❌'} ${m.t}`).join('<br>')}</p>
+ <p><b>+${base+bonus} pts</b> (${base} por economizar + ${bonus} das missões)</p>
+ <b>Maiores consumidores do dia</b>
+ ${top.map(d=>`<div class="f">${d.e} ${d.n}: ${fmt(d.kwh/d.hrs*1000,0)} W × ${fmt(d.hrs,1)} h ÷ 1000 = ${fmt(d.kwh)} kWh</div>`).join('')}
+ <b>🧠 Desafio (+50 pts)</b><p>${q.q}</p>${q.o.map(o=>`<button class="opt" data-ok="${o.ok}">${o.t}</button>`).join('')}<div id="ex"></div>
+ <button class="btn" onclick="nextDay()">Próximo dia ▶</button>`)}
+function gameOver(){G.state='over';beep(110,.6,'sawtooth');S.cameras.main.shake(400,.01);const t=devs.slice().sort((a,b)=>b.kwh-a.kwh)[0];if(G.pts>G.best){G.best=G.pts;lss(G.pts)}
+ show(`<h2>💥 A conta de luz estourou!</h2><p>Você passou do limite de <b>${fmt(limit(),1)} kWh</b> no dia ${G.day}.</p>
+ <p>Maior vilão: ${t.e} <b>${t.n}</b> — ${fmt(t.kwh)} kWh (${fmt(t.kwh/t.hrs*1000,0)} W × ${fmt(t.hrs,1)} h)</p>
+ <p>Dias sobrevividos: <b>${G.day-1}</b> · Pontos: <b>${G.pts}</b> · Recorde: <b>${G.best}</b></p>
+ <button class="btn" onclick="newGame()">Tentar de novo</button> <button class="btn g" onclick="openCalc()">🧮 Calculadora</button>`)}
+function menu(){show(`<h2>🏠 Casa Econômica</h2><p>Sua família esquece aparelhos ligados! Percorra a casa e <b>desligue tudo</b> para o consumo do dia não passar do limite. Se estourar, <b>fim de jogo</b>. Léo, Ana e Papai ligam aparelhos pela casa — e mais gente chega a cada poucos dias. O limite diminui a cada dia.</p>
+ <ul><li>Mover: <b>WASD</b>/setas (ou botões na tela)</li><li>Ação: <b>E</b>/Espaço — desligar aparelho ou trocar lâmpada incandescente por LED</li><li>A geladeira precisa ficar ligada</li></ul>
+ <div class="f">Energia (kWh) = Potência (kW) × Tempo (h)<br>Custo (R$) = kWh × tarifa</div>
+ <p>Ex.: chuveiro de 4.500 W = 4,5 kW ligado por 1 h → 4,5 kWh → R$ 4,05 (tarifa R$ 0,90).</p>
+ <button class="btn" onclick="newGame()">▶ Jogar</button> <button class="btn g" onclick="openCalc()">🧮 Calculadora</button>`)}
+
+$('mbox').addEventListener('click',e=>{const b=e.target.closest('.opt');if(!b||b.disabled)return;
+ $('mbox').querySelectorAll('.opt').forEach(x=>{x.disabled=1;if(x.dataset.ok==1)x.classList.add('ok')});
+ const ok=b.dataset.ok==1;if(ok){G.pts+=50;hud()}else b.classList.add('bad');
+ $('ex').innerHTML='<div class="f">'+(ok?'✅ Correto! ':'❌ Não foi dessa vez. ')+G.ex+'</div>'});
+function calc(){const p=+$('cp').value||0,h=+$('ch').value||0,d=+$('cd').value||0,t=+$('ct').value||0,k=p/1000,e=k*h*d;
+ $('cr').innerHTML=`1) Potência em kW: ${fmt(p,0)} ÷ 1000 = <b>${fmt(k,3)} kW</b><br>2) Energia: ${fmt(k,3)} kW × ${h} h × ${d} dias = <b>${fmt(e)} kWh</b><br>3) Custo: ${fmt(e)} kWh × R$ ${fmt(t)} = <b>R$ ${fmt(e*t)}</b>`}
+function openCalc(){$('calc').classList.add('on');G.calc=1;calc()}
+$('cs').innerHTML=D0.map(d=>`<option value="${d.w}">${d.e} ${d.n} (${d.w} W)</option>`).join('')+'<option value="9">💡 Lâmpada LED (9 W)</option>';
+$('cs').value=100;$('cs').onchange=()=>{$('cp').value=$('cs').value;calc()};
+['cp','ch','cd','ct'].forEach(i=>$(i).addEventListener('input',calc));
+$('cx').onclick=()=>{$('calc').classList.remove('on');G.calc=0};$('bcalc').onclick=openCalc;
+
+document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();T[k]=1});
+ ['pointerup','pointerleave','pointercancel'].forEach(v=>b.addEventListener(v,()=>T[k]=0))});
+$('bact').addEventListener('pointerdown',e=>{e.preventDefault();act()});
+if(navigator.maxTouchPoints>0)document.body.classList.add('show-pad');
+addEventListener('keydown',e=>{if(/^(Arrow|Space)/.test(e.code)&&!/INPUT|SELECT|BUTTON/.test(e.target.tagName))e.preventDefault()});
+
+const DOORS={'0-1':[400,140],'0-2':[200,260],'1-3':[600,260],'2-3':[400,380]};
+const room=(x,y)=>(x>=400?1:0)+(y>=260?2:0);
+function route(x,y,d){const a=room(x,y),b=room(d.x,d.y),adj={0:[1,2],1:[0,3],2:[0,3],3:[1,2]},q=[[a]],seen={[a]:1};let r=[a];
+ while(q.length){const p=q.shift(),l=p[p.length-1];if(l==b){r=p;break}adj[l].forEach(n=>{if(!seen[n]){seen[n]=1;q.push([...p,n])}})}
+ const w=[];for(let i=0;i<r.length-1;i++)w.push(DOORS[r[i]+'-'+r[i+1]]||DOORS[r[i+1]+'-'+r[i]]);w.push([d.x,d.y+30]);return w}
+let mute=0,AC;
+function beep(f,d=.12,ty='sine'){if(mute)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d)}catch(e){}}
+$('bmute').onclick=()=>{mute=!mute;$('bmute').textContent=mute?'🔇':'🔊'};
+function banner(t,c='#fff'){const x=S.add.text(400,230,t,{fontSize:'32px',fontStyle:'bold',color:c,stroke:'#000',strokeThickness:6,fontFamily:'sans-serif',align:'center'}).setOrigin(.5).setDepth(30);
+ S.tweens.add({targets:x,y:190,alpha:0,delay:1200,duration:900,onComplete:()=>x.destroy()})}
+function initNpcs(){S.npcs.forEach(n=>{n.act=G.day>=n.from;n.x=n.hx;n.y=n.hy;n.wp=[];n.tgt=null;n.cd=2+Math.random()*4;n.spr.setVisible(n.act);n.lb.setVisible(n.act)});devs.forEach(d=>d.claim=0)}
+const cool=()=>Math.max(3,8-.6*G.day)*(.7+Math.random()*.6);
+function npcStep(n,dt,t){if(!n.act)return;
+ if(n.wp.length){const[tx,ty]=n.wp[0],dx=tx-n.x,dy=ty-n.y,l=Math.hypot(dx,dy),v=95*dt;
+  if(l<=v){n.x=tx;n.y=ty;n.wp.shift();
+   if(!n.wp.length&&n.tgt){const d=n.tgt;d.claim=0;d.on=1;d.t0=G.h;pop(d,n.n+' ligou! ⚡','#f87171');burst(d,0xf87171);beep(180,.15,'square');n.tgt=null;n.cd=cool()}}
+  else{n.x+=dx/l*v;n.y+=dy/l*v;n.spr.setFlipX(dx<0)}
+  n.spr.setAngle(Math.sin(t/70)*7)}
+ else{n.spr.setAngle(0);n.cd-=dt;if(n.cd<=0){const p=[];devs.forEach(d=>{if(!d.on&&!d.fixed&&!d.claim)for(let i=0;i<d.wt;i++)p.push(d)});
+  if(p.length){const d=p[Math.random()*p.length|0];d.claim=1;n.tgt=d;n.wp=route(n.x,n.y,d)}else n.cd=1}}
+ n.spr.setPosition(n.x,n.y).setDepth(5+n.y/1000);n.lb.setPosition(n.x,n.y-32)}
+function rr(g,x,y,w,h,c,r,a=1){g.fillStyle(0,.18).fillRoundedRect(x+3,y+4,w,h,r);g.fillStyle(c,a).fillRoundedRect(x,y,w,h,r)}
+function floor(g,x,y,w,h,c1,c2,t){g.fillStyle(c1).fillRect(x,y,w,h);
+ if(t=='w'){for(let j=0;j<h/20;j++){g.fillStyle(c2,.5).fillRect(x,y+j*20,w,2);for(let i=(j%2)*40;i<w;i+=80)g.fillRect(x+i,y+j*20,2,20)}}
+ else for(let j=0;j<h/40;j++)for(let i=0;i<w/40;i++)if((i+j)%2)g.fillStyle(c2,.6).fillRect(x+i*40,y+j*40,40,40)}
+function tex(s,k,skin,shirt,hair,long){const g=s.add.graphics();
+ g.fillStyle(0,.28).fillEllipse(16,39,22,8);g.fillStyle(0x334155).fillRoundedRect(9,28,6,10,2).fillRoundedRect(17,28,6,10,2);
+ g.fillStyle(shirt).fillRoundedRect(7,15,18,16,6);g.fillStyle(skin).fillCircle(16,10,8);
+ if(long)g.fillStyle(hair).fillRoundedRect(6,3,5,16,2).fillRoundedRect(21,3,5,16,2);
+ g.fillStyle(hair).fillRoundedRect(8,1,16,8,4);g.fillStyle(0x111827).fillCircle(13,11,1.5).fillCircle(19,11,1.5);g.generateTexture(k,32,42);g.destroy()}
+
+function burst(d,c){const e=S.add.particles(d.x,d.y,'sp',{speed:{min:70,max:180},lifespan:650,scale:{start:1.3,end:0},tint:c,quantity:16,emitting:false}).setDepth(22);e.explode(16);S.time.delayedCall(800,()=>e.destroy())}
+function hop(){S.tweens.add({targets:S.p,scaleX:1.2,scaleY:.8,duration:70,yoyo:true,onComplete:()=>S.p.setScale(1)})}
+function confetti(){for(let i=0;i<6;i++)S.time.delayedCall(i*160,()=>{const e=S.add.particles(0,0,'sp',{speed:{min:80,max:260},angle:{min:60,max:120},gravityY:260,lifespan:2200,scale:{start:1.5,end:.6},tint:[0xfde047,0x4ade80,0x38bdf8,0xf472b6],emitting:false}).setDepth(30);e.explode(28,80+Math.random()*640,-6);S.time.delayedCall(2400,()=>e.destroy())})}
+function create(){S=this;
+ const g=this.add.graphics();
+ floor(g,0,0,400,260,0xb5835a,0x8f6440,'w');floor(g,400,0,400,260,0xe5e7eb,0xcbd5e1,'t');
+ floor(g,0,260,400,260,0xa78bb8,0x8a6fa0,'w');floor(g,400,260,400,260,0xbae6fd,0x93d5f5,'t');
+ rr(g,190,90,130,110,0xb91c1c,10,.55);rr(g,200,205,100,34,0x475569,8);rr(g,205,190,90,16,0x64748b,6);
+ rr(g,430,12,250,30,0x94a3b8,4);rr(g,470,165,100,58,0x9a6a3a,6);
+ rr(g,30,400,120,84,0x60a5fa,8);rr(g,38,408,40,22,0xf8fafc,6);rr(g,285,302,80,52,0x7c4a1e,6);
+ rr(g,556,430,180,60,0xf8fafc,14);rr(g,570,438,152,44,0x7dd3fc,10);rr(g,430,282,60,26,0xf1f5f9,6);g.fillStyle(0xf8fafc).fillCircle(455,470,14);
+ [[170,254,60,12],[570,254,60,12],[394,110,12,60],[394,350,12,60]].forEach(([x,y,w,h])=>g.fillStyle(0x92400e,.75).fillRect(x,y,w,h));
+ [60,250,470,660].forEach(x=>g.fillStyle(0x7dd3fc).fillRect(x,0,70,6));
+ [[0,0,'SALA'],[400,0,'COZINHA'],[0,260,'QUARTO'],[400,260,'BANHEIRO']].forEach(([x,y,t])=>this.add.text(x+12,y+238,t,{fontSize:'12px',fontStyle:'bold',color:'#000',fontFamily:'sans-serif'}).setAlpha(.3));
+ const walls=[[0,254,170,12],[230,254,340,12],[630,254,170,12],[394,0,12,110],[394,170,12,180],[394,410,12,110]].map(([x,y,w,h])=>{
+  const r=this.add.rectangle(x+w/2,y+h/2,w,h,0x1e293b).setStrokeStyle(2,0x64748b).setDepth(4);this.physics.add.existing(r,true);return r});
+ this.add.rectangle(400,260,792,512).setStrokeStyle(8,0x0f172a).setDepth(6);
+ devs.forEach(d=>{d.on=d.fixed?1:0;d.claim=0;
+  this.add.ellipse(d.x,d.y+25,46,12,0,.3).setDepth(1);
+  d.gl=this.add.circle(d.x,d.y,40,0xfde047,0).setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
+  d.bx=this.add.rectangle(d.x,d.y,46,46,0x1e293b).setStrokeStyle(3,0x475569).setDepth(2);
+  d.ic=this.add.text(d.x,d.y,d.e,{fontSize:'28px'}).setOrigin(.5).setDepth(3);
+  d.lb=this.add.text(d.x,d.y+38,'',{fontSize:'11px',fontStyle:'bold',color:'#fff',backgroundColor:'#0f172acc',padding:{x:5,y:1},fontFamily:'sans-serif'}).setOrigin(.5).setDepth(3)});
+ tex(this,'p',0xfcd5b0,0x22c55e,0x3b2417);tex(this,'n1',0xf5c9a0,0xf97316,0xfacc15);tex(this,'n2',0xe8b48a,0xec4899,0x7c2d12,1);tex(this,'n3',0xd9a072,0x6366f1,0x111827);
+ {const q=this.add.graphics();q.fillStyle(0xffffff).fillCircle(4,4,4);q.generateTexture('sp',8,8);q.destroy()}
+ devs.forEach(d=>{d.em=this.add.particles(d.x,d.y-14,'sp',{speedY:{min:-40,max:-15},speedX:{min:-12,max:12},lifespan:900,scale:{start:.8,end:0},alpha:{start:.8,end:0},tint:d.w>1000?0xef4444:d.w>100?0xf59e0b:0xfde047,frequency:Math.max(90,700-d.w/6),quantity:1,emitting:false}).setDepth(22)});
+ [['🪴',28,44],['📚',365,40],['🖼️',260,22],['🍽️',520,194],['☕',450,27],['🪴',772,236],['🧸',60,432],['🪴',372,490],['🪞',470,290],['🧻',490,470],['🪴',776,292]].forEach(([e,x,y])=>{this.add.ellipse(x,y+14,26,8,0,.25).setDepth(1);this.add.text(x,y,e,{fontSize:'24px'}).setOrigin(.5).setDepth(2)});
+ this.npcs=[['Léo','n1',1,250,210,.85],['Ana','n2',4,560,150,1],['Papai','n3',8,250,430,1.08]].map(([n,k,from,x,y,sc])=>({n,from,hx:x,hy:y,x,y,wp:[],tgt:null,cd:3,act:0,
+  spr:this.add.sprite(x,y,k).setScale(sc).setVisible(false),
+  lb:this.add.text(x,y-32,n,{fontSize:'11px',fontStyle:'bold',color:'#fff',stroke:'#000',strokeThickness:3,fontFamily:'sans-serif'}).setOrigin(.5).setDepth(10).setVisible(false)}));
+ this.p=this.physics.add.sprite(230,200,'p').setCollideWorldBounds(true);this.p.body.setSize(18,14).setOffset(7,26);
+ this.pl=this.add.text(230,170,'Você',{fontSize:'11px',fontStyle:'bold',color:'#86efac',stroke:'#000',strokeThickness:3,fontFamily:'sans-serif'}).setOrigin(.5).setDepth(10);
+ walls.forEach(w=>this.physics.add.collider(this.p,w));
+ this.night=this.add.rectangle(400,260,800,520,0x0b1240,0).setDepth(20);
+ this.k=this.input.keyboard.addKeys('W,A,S,D,E,SPACE,UP,DOWN,LEFT,RIGHT',false);
+ this.k.E.on('down',act);this.k.SPACE.on('down',act);
+ hud();menu()}
+
+function update(t,dt){const k=this.k,p=this.p,s=dt/1000;
+ const c=(6+G.h)%24,nt=c>=18&&c<21?(c-18)/3:(c>=21||c<5)?1:c<7?(7-c)/2:0;this.night.setAlpha(.45*nt);
+ devs.forEach(d=>{const col=d.w>1000?0xef4444:d.w>100?0xf59e0b:0xfde047;
+  d.gl.setFillStyle(col,d.on?.3+.12*Math.sin(t/180):0);d.bx.setFillStyle(d.on?0x334155:0x1e293b).setStrokeStyle(3,d.on?col:0x475569);
+  d.ic.setAlpha(d.on?1:.4).setY(d.y+(d.on?Math.sin(t/150)*2:0));d.lb.setText((d.led?'LED ':'')+fmt(d.w,0)+' W').setColor(d.on?'#fde68a':'#94a3b8')});
+ devs.forEach(d=>{if(d.em&&d.em.emitting!==!!d.on)d.em.emitting=!!d.on});this.pl.setPosition(p.x,p.y-32);
+ if(G.state!=='play'||G.modal||G.calc){p.setVelocity(0);p.setAngle(0);return}
+ const vx=((k.D.isDown||k.RIGHT.isDown||T.r)?1:0)-((k.A.isDown||k.LEFT.isDown||T.l)?1:0),
+       vy=((k.S.isDown||k.DOWN.isDown||T.d)?1:0)-((k.W.isDown||k.UP.isDown||T.u)?1:0),m=Math.hypot(vx,vy)||1;
+ p.setVelocity(vx/m*230,vy/m*230);p.setAngle(vx||vy?Math.sin(t/60)*7:0);if(vx)p.setFlipX(vx<0);p.setDepth(5+p.y/1000);
+ const dh=s*24/DAYSEC;G.h+=dh;let P=0;
+ devs.forEach(d=>{if(d.on){P+=d.w;const e=d.w/1000*dh;d.kwh+=e;d.hrs+=dh;G.kwh+=e;if(d.auto&&G.h-d.t0>=1)turnOff(d,1)}});G.P=P;
+ this.npcs.forEach(n=>npcStep(n,s,t));
+ const nb=near();let h='Aproxime-se de um aparelho e aperte E / Ação';
+ if(nb){const kw=nb.w/1000;h=nb.on?`${nb.e} <b>${nb.n}</b> — ${fmt(nb.w,0)} W = ${fmt(kw,2)} kWh por hora (R$ ${fmt(kw*TAR)}/h)<br>${nb.fixed?'Precisa ficar ligada':'E: desligar'}`:(nb.lamp&&nb.w>20?`${nb.e} ${nb.n} apagada<br>E: trocar por lâmpada LED (60 W → 9 W)`:`${nb.e} ${nb.n} — desligado ✔`)}
+ if(h!==G.ht){G.ht=h;$('hint').innerHTML=h}
+ G.hu+=dt;if(G.hu>120){G.hu=0;hud()}
+ if(G.kwh>limit()*.85&&!G.warned){G.warned=1;banner('⚠️ Consumo alto!','#fbbf24');beep(300,.3,'square')}
+ if(G.kwh>limit()){hud();gameOver()}else if(G.h>=24)endDay()}
+
+new Phaser.Game({type:Phaser.AUTO,parent:'game',width:800,height:520,backgroundColor:'#0b1020',physics:{default:'arcade'},
+ scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_HORIZONTALLY},scene:{create,update}});
+
+</script></body></html>
